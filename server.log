@@ -1,0 +1,18 @@
+
+> invoice-comply@0.1.0 dev
+> next dev --turbopack
+
+   ▲ Next.js 15.4.5 (Turbopack)
+   - Local:        http://localhost:3000
+   - Network:      http://172.20.10.3:3000
+   - Environments: .env.local
+
+ ✓ Starting...
+ ○ Compiling middleware ...
+ ✓ Compiled middleware in 930ms
+ ✓ Ready in 3.8s
+ ○ Compiling /api/invoices/upload ...
+ ✓ Compiled /api/invoices/upload in 3.4s
+pdf-parse loaded successfully
+ POST /api/invoices/upload 401 in 3906ms
+[?25h

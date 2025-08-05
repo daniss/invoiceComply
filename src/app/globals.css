@@ -1,0 +1,141 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 221.2 83.2% 53.3%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222.2 84% 4.9%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96%;
+    --accent-foreground: 222.2 84% 4.9%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 221.2 83.2% 53.3%;
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 217.2 91.2% 59.8%;
+    --primary-foreground: 222.2 84% 4.9%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 224.3 76.3% 94.1%;
+  }
+}
+
+@layer base {
+  body {
+    background-color: white;
+    color: #0f172a;
+    font-family: Inter, system-ui, sans-serif;
+  }
+}
+
+/* French-specific styles */
+.invoice-preview {
+  font-family: 'Arial', sans-serif;
+  line-height: 1.4;
+}
+
+.facture-header {
+  @apply text-2xl font-bold text-blue-900 mb-4;
+}
+
+.siret-display {
+  @apply font-mono text-sm tracking-wider;
+}
+
+.euro-amount {
+  @apply font-semibold text-right;
+}
+
+/* Status indicators */
+.status-pending {
+  @apply bg-yellow-100 text-yellow-800 border-yellow-200;
+}
+
+.status-success {
+  @apply bg-green-100 text-green-800 border-green-200;
+}
+
+.status-error {
+  @apply bg-red-100 text-red-800 border-red-200;
+}
+
+.status-warning {
+  @apply bg-orange-100 text-orange-800 border-orange-200;
+}
+
+/* Loading animations */
+.loading-spinner {
+  @apply animate-spin rounded-full border-b-2 border-blue-600;
+}
+
+/* French form styling */
+.french-form-field {
+  @apply space-y-2;
+}
+
+.french-form-label {
+  @apply text-sm font-medium text-gray-700;
+}
+
+.french-form-input {
+  @apply w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500;
+}
+
+.french-form-error {
+  @apply text-sm text-red-600 mt-1;
+}
+
+/* PDF upload area */
+.pdf-dropzone {
+  @apply border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-400 transition-colors;
+}
+
+.pdf-dropzone.active {
+  @apply border-blue-500 bg-blue-50;
+}
+
+/* Compliance indicators */
+.compliance-excellent {
+  @apply bg-green-500 text-white;
+}
+
+.compliance-good {
+  @apply bg-blue-500 text-white;
+}
+
+.compliance-warning {
+  @apply bg-yellow-500 text-white;
+}
+
+.compliance-critical {
+  @apply bg-red-500 text-white;
+}
