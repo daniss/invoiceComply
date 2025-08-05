@@ -67,11 +67,23 @@ class ApiClient {
   }
 
   async get<T>(endpoint: string, params?: Record<string, any>): Promise<T> {
-    const url = params 
-      ? `${endpoint}?${new URLSearchParams(params).toString()}`
-      : endpoint
+    if (params) {
+      // Filter out undefined values
+      const filteredParams = Object.entries(params)
+        .filter(([_, value]) => value !== undefined && value !== null)
+        .reduce((acc, [key, value]) => {
+          acc[key] = value
+          return acc
+        }, {} as Record<string, any>)
+      
+      const url = Object.keys(filteredParams).length > 0
+        ? `${endpoint}?${new URLSearchParams(filteredParams).toString()}`
+        : endpoint
+      
+      return this.request<T>(url, { method: 'GET' })
+    }
 
-    return this.request<T>(url, { method: 'GET' })
+    return this.request<T>(endpoint, { method: 'GET' })
   }
 
   async post<T>(endpoint: string, data?: any): Promise<T> {
@@ -164,20 +176,6 @@ export const transmissionApi = {
     })
 }
 
-export const bulkApi = {
-  process: (files: FileList, template: string, options?: any) => {
-    const formData = new FormData()
-    Array.from(files).forEach(file => formData.append('files', file))
-    formData.append('template', template)
-    if (options) formData.append('options', JSON.stringify(options))
-    return apiClient.upload<{ success: boolean; jobId: string }>('/bulk/process', formData)
-  },
-
-  getStatus: (jobId?: string) =>
-    apiClient.get<{ success: boolean; job?: any; jobs?: any[] }>('/bulk/process', 
-      jobId ? { jobId } : undefined
-    )
-}
 
 export const facturXApi = {
   generate: (invoiceData: any, options?: { format?: string; compliance?: boolean }) =>

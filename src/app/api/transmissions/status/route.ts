@@ -156,11 +156,12 @@ export async function GET(request: NextRequest) {
           invoices:invoice_id (
             invoice_number,
             supplier_name,
-            total_amount
+            total_amount_including_vat
           )
         `)
         .eq('id', transmissionId)
-        .eq('user_id', user.id)
+        .eq('invoices.user_id', user.id)
+        .not('invoices', 'is', null)
         .single()
 
       if (dbError || !transmission) {
@@ -212,10 +213,11 @@ export async function GET(request: NextRequest) {
         invoices:invoice_id (
           invoice_number,
           supplier_name,
-          total_amount
+          total_amount_including_vat
         )
       `)
-      .eq('user_id', user.id)
+      .eq('invoices.user_id', user.id)
+      .not('invoices', 'is', null)
       .order('created_at', { ascending: false })
 
     if (status) {
@@ -241,8 +243,8 @@ export async function GET(request: NextRequest) {
     // Get statistics
     const { data: stats, error: statsError } = await supabase
       .from('transmissions')
-      .select('status')
-      .eq('user_id', user.id)
+      .select('status, invoices!inner(user_id)')
+      .eq('invoices.user_id', user.id)
 
     const statistics = {
       total: stats?.length || 0,

@@ -103,12 +103,6 @@ export function useTransmissions(userId?: string) {
   )
 }
 
-export function useBulkJobs(userId?: string) {
-  return useRealtimeSubscription(
-    'bulk_processing_jobs',
-    userId ? `user_id=eq.${userId}` : undefined
-  )
-}
 
 // Compliance checks hook
 export function useComplianceChecks(userId?: string) {
@@ -212,67 +206,6 @@ export function useTransmissionStatus(transmissionId: string) {
   return { status, loading }
 }
 
-// Hook for bulk job progress
-export function useBulkJobProgress(jobId: string) {
-  const [progress, setProgress] = useState({
-    status: 'pending',
-    processedFiles: 0,
-    totalFiles: 0,
-    errors: []
-  })
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    const supabase = createClient()
-    
-    const setupTracking = async () => {
-      // Get initial progress
-      const { data, error } = await supabase
-        .from('bulk_processing_jobs')
-        .select('status, processed_files, total_files, errors')
-        .eq('id', jobId)
-        .single()
-
-      if (!error && data) {
-        setProgress({
-          status: data.status,
-          processedFiles: data.processed_files || 0,
-          totalFiles: data.total_files || 0,
-          errors: data.errors || []
-        })
-      }
-      setLoading(false)
-
-      // Subscribe to changes
-      const channel = supabase
-        .channel(`bulk_job_${jobId}_progress`)
-        .on('postgres_changes',
-          {
-            event: 'UPDATE',
-            schema: 'public',
-            table: 'bulk_processing_jobs',
-            filter: `id=eq.${jobId}`
-          },
-          (payload) => {
-            setProgress({
-              status: payload.new.status,
-              processedFiles: payload.new.processed_files || 0,
-              totalFiles: payload.new.total_files || 0,
-              errors: payload.new.errors || []
-            })
-          }
-        )
-        .subscribe()
-
-      return () => supabase.removeChannel(channel)
-    }
-
-    const cleanup = setupTracking()
-    return () => cleanup.then(fn => fn && fn())
-  }, [jobId])
-
-  return { progress, loading }
-}
 
 // Hook for dashboard stats with real-time updates
 export function useDashboardStats(userId?: string) {
@@ -350,4 +283,32 @@ export function useDashboardStats(userId?: string) {
   }, [userId])
 
   return { stats, loading, error }
+}
+
+// Polling hook for regular data updates
+export function usePolling(
+  fetchFunction: () => Promise<void>,
+  options: {
+    interval: number
+    enabled?: boolean
+    immediate?: boolean
+  }
+) {
+  const { interval, enabled = true, immediate = true } = options
+  
+  useEffect(() => {
+    if (!enabled) return
+
+    // Run immediately if requested
+    if (immediate) {
+      fetchFunction().catch(console.error)
+    }
+
+    // Set up polling interval
+    const intervalId = setInterval(() => {
+      fetchFunction().catch(console.error)
+    }, interval)
+
+    return () => clearInterval(intervalId)
+  }, [fetchFunction, interval, enabled, immediate])
 }

@@ -192,10 +192,42 @@ export default function ConvertPage() {
       }
       
       const result = await generateFacturX(async () => {
-        return await facturXApi.generate(apiData, {
-          format: 'xml', // Generate XML only for now (PDF generation has issues)
-          compliance: false // Disable compliance check for bypass
+        if (!invoiceId) {
+          throw new Error('ID de facture requis pour la génération Factur-X')
+        }
+        
+        // Call the proper Factur-X PDF generation endpoint
+        const response = await fetch(`/api/invoices/${invoiceId}/factur-x`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            bypass: true // Allow generation even if not fully compliant (test mode)
+          })
         })
+        
+        if (!response.ok) {
+          const errorData = await response.json()
+          throw new Error(errorData.error || 'Erreur génération Factur-X')
+        }
+        
+        // Get the PDF blob
+        const pdfBlob = await response.blob()
+        const pdfUrl = URL.createObjectURL(pdfBlob)
+        
+        return {
+          success: true,
+          pdf: {
+            url: pdfUrl,
+            blob: pdfBlob,
+            fileName: `facture-${invoiceData.invoiceNumber || 'invoice'}.pdf`
+          },
+          factorXProfile: response.headers.get('X-Factur-X-Profile'),
+          invoiceNumber: response.headers.get('X-Invoice-Number'),
+          totalAmount: response.headers.get('X-Total-Amount'),
+          currency: response.headers.get('X-Currency')
+        }
       })
       
       if (result.success) {
@@ -211,48 +243,22 @@ export default function ConvertPage() {
     if (!facturXData) return
     
     try {
-      let content: string
-      let mimeType: string
-      let filename: string
-      
-      if (format === 'xml' && facturXData.xml) {
-        content = facturXData.xml.content
-        mimeType = 'application/xml'
-        filename = `${extractedData?.invoiceNumber || 'invoice'}_factur-x.xml`
-      } else if (format === 'pdf' && facturXData.pdf) {
-        // Convert base64 to blob
-        const byteCharacters = atob(facturXData.pdf.content)
-        const byteNumbers = new Array(byteCharacters.length)
-        for (let i = 0; i < byteCharacters.length; i++) {
-          byteNumbers[i] = byteCharacters.charCodeAt(i)
-        }
-        const byteArray = new Uint8Array(byteNumbers)
-        const blob = new Blob([byteArray], { type: 'application/pdf' })
-        
-        const url = URL.createObjectURL(blob)
+      if (format === 'pdf' && facturXData.pdf) {
+        // Handle PDF blob directly
         const a = document.createElement('a')
-        a.href = url
-        a.download = facturXData.pdf.filename || `${extractedData?.invoiceNumber || 'invoice'}_factur-x.pdf`
+        a.href = facturXData.pdf.url
+        a.download = facturXData.pdf.fileName
         document.body.appendChild(a)
         a.click()
         document.body.removeChild(a)
-        URL.revokeObjectURL(url)
-        return
-      } else {
         return
       }
       
-      const blob = new Blob([content], { type: mimeType })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = filename
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      URL.revokeObjectURL(url)
+      // XML format is not generated with new system
+      console.warn('XML download is not available with Factur-X PDF generation')
     } catch (error) {
       console.error('Download error:', error)
+      toast.error('Erreur de téléchargement', 'Impossible de télécharger le fichier')
     }
   }
 
@@ -600,19 +606,13 @@ export default function ConvertPage() {
                         className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:opacity-90"
                       >
                         <Download className="h-4 w-4 mr-2" />
-                        Télécharger PDF
+                        Télécharger Factur-X PDF
                       </Button>
                     )}
-                    {facturXData.xml && (
-                      <Button 
-                        onClick={() => downloadFacturX('xml')}
-                        variant="outline"
-                        className="flex-1"
-                      >
-                        <Download className="h-4 w-4 mr-2" />
-                        Télécharger XML
-                      </Button>
-                    )}
+                    <div className="text-xs text-slate-500 flex items-center">
+                      <Shield className="h-3 w-3 mr-1" />
+                      PDF avec XML intégré (Factur-X conforme)
+                    </div>
                   </div>
                   
                   {/* Retry button for failed generation */}

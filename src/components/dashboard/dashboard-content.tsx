@@ -9,7 +9,6 @@ import {
   FileOutput, 
   Send, 
   Search, 
-  Package, 
   CheckCircle, 
   AlertCircle, 
   Clock
@@ -24,20 +23,70 @@ interface DashboardStats {
   averageProcessingTime: number
 }
 
+interface RecentActivity {
+  id: string
+  invoiceNumber: string
+  status: string
+  type: 'pdf_upload' | 'manual_creation'
+  timestamp: string
+}
+
+interface DashboardData {
+  stats: DashboardStats
+  recentActivity: RecentActivity[]
+}
+
 export function DashboardContent() {
-  const [stats, setStats] = useState<DashboardStats>({
-    totalInvoices: 127,
-    processedToday: 23,
-    pendingTransmissions: 3,
-    complianceRate: 94.2,
-    averageProcessingTime: 2.1
+  const [data, setData] = useState<DashboardData>({
+    stats: {
+      totalInvoices: 0,
+      processedToday: 0,
+      pendingTransmissions: 0,
+      complianceRate: 0,
+      averageProcessingTime: 0
+    },
+    recentActivity: []
   })
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        const response = await fetch('/api/dashboard/stats')
+        if (response.ok) {
+          const result = await response.json()
+          if (result.success) {
+            setData(result)
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchDashboardData()
+  }, [])
+
+  const { stats } = data
 
   const getComplianceColor = (rate: number) => {
     if (rate >= 95) return 'text-green-600'
     if (rate >= 90) return 'text-blue-600'
     if (rate >= 80) return 'text-yellow-600'
     return 'text-red-600'
+  }
+
+  const getTimeAgo = (timestamp: string) => {
+    const date = new Date(timestamp)
+    const now = new Date()
+    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000)
+    
+    if (diffInSeconds < 60) return 'À l\'instant'
+    if (diffInSeconds < 3600) return `Il y a ${Math.floor(diffInSeconds / 60)} min`
+    if (diffInSeconds < 86400) return `Il y a ${Math.floor(diffInSeconds / 3600)}h`
+    return `Il y a ${Math.floor(diffInSeconds / 86400)} jour(s)`
   }
 
   return (
@@ -201,19 +250,6 @@ export function DashboardContent() {
               </div>
             </Link>
             
-            <Link href="/dashboard/bulk">
-              <div className="group rounded-2xl bg-slate-50/80 hover:bg-slate-100/80 p-5 transition-all duration-300 cursor-pointer border border-slate-200/50">
-                <div className="flex items-center">
-                  <div className="p-2 bg-purple-100 rounded-xl mr-4">
-                    <Package className="h-6 w-6 text-purple-600" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="font-semibold text-slate-900">Traitement en lot</div>
-                    <div className="text-slate-600 text-sm">Import CSV</div>
-                  </div>
-                </div>
-              </div>
-            </Link>
           </div>
         </div>
 
@@ -276,62 +312,83 @@ export function DashboardContent() {
         </div>
         
         <div className="space-y-4">
-          <div className="group relative rounded-2xl bg-emerald-50/80 border border-emerald-200/50 p-5 hover:bg-emerald-50 transition-all duration-300">
-            <div className="flex items-center space-x-4">
-              <div className="p-2.5 bg-emerald-100 rounded-xl">
-                <CheckCircle className="h-5 w-5 text-emerald-600" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-medium text-slate-900">Facture FACT-2024-0127 convertie avec succès</p>
-                <div className="flex items-center space-x-2 mt-1">
-                  <p className="text-sm text-emerald-700">Il y a 5 minutes</p>
-                  <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full"></div>
-                  <p className="text-sm text-slate-600">PDF → Factur-X</p>
+          {loading ? (
+            <div className="space-y-4">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="group relative rounded-2xl bg-slate-50/80 border border-slate-200/50 p-5 animate-pulse">
+                  <div className="flex items-center space-x-4">
+                    <div className="p-2.5 bg-slate-200 rounded-xl w-10 h-10"></div>
+                    <div className="flex-1 min-w-0">
+                      <div className="h-4 bg-slate-200 rounded w-3/4 mb-2"></div>
+                      <div className="h-3 bg-slate-200 rounded w-1/2"></div>
+                    </div>
+                    <div className="px-3 py-1 bg-slate-200 rounded-full w-16 h-6"></div>
+                  </div>
                 </div>
-              </div>
-              <div className="px-3 py-1 bg-emerald-100 rounded-full">
-                <span className="text-xs font-semibold text-emerald-700">SUCCÈS</span>
-              </div>
+              ))}
             </div>
-          </div>
-          
-          <div className="group relative rounded-2xl bg-blue-50/80 border border-blue-200/50 p-5 hover:bg-blue-50 transition-all duration-300">
-            <div className="flex items-center space-x-4">
-              <div className="p-2.5 bg-blue-100 rounded-xl">
-                <Send className="h-5 w-5 text-blue-600" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-medium text-slate-900">3 factures transmises à Chorus Pro</p>
-                <div className="flex items-center space-x-2 mt-1">
-                  <p className="text-sm text-blue-700">Il y a 12 minutes</p>
-                  <div className="w-1.5 h-1.5 bg-blue-400 rounded-full"></div>
-                  <p className="text-sm text-slate-600">Transmission automatique</p>
+          ) : data.recentActivity.length > 0 ? (
+            data.recentActivity.map((activity) => {
+              const isSuccess = ['validated', 'finalized', 'transmitted'].includes(activity.status)
+              const isManual = activity.type === 'manual_creation'
+              const timeAgo = getTimeAgo(activity.timestamp)
+              
+              return (
+                <div key={activity.id} className={`group relative rounded-2xl border p-5 hover:shadow-md transition-all duration-300 ${
+                  isSuccess 
+                    ? 'bg-emerald-50/80 border-emerald-200/50 hover:bg-emerald-50' 
+                    : 'bg-blue-50/80 border-blue-200/50 hover:bg-blue-50'
+                }`}>
+                  <div className="flex items-center space-x-4">
+                    <div className={`p-2.5 rounded-xl ${
+                      isSuccess ? 'bg-emerald-100' : 'bg-blue-100'
+                    }`}>
+                      {isManual ? (
+                        <FileOutput className={`h-5 w-5 ${isSuccess ? 'text-emerald-600' : 'text-blue-600'}`} />
+                      ) : (
+                        isSuccess ? (
+                          <CheckCircle className="h-5 w-5 text-emerald-600" />
+                        ) : (
+                          <Clock className="h-5 w-5 text-blue-600" />
+                        )
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-slate-900">
+                        {isManual ? 'Facture manuelle' : 'Facture'} {activity.invoiceNumber || 'nouvelle'} {
+                          isSuccess ? 'finalisée' : 'en cours'
+                        }
+                      </p>
+                      <div className="flex items-center space-x-2 mt-1">
+                        <p className={`text-sm ${isSuccess ? 'text-emerald-700' : 'text-blue-700'}`}>
+                          {timeAgo}
+                        </p>
+                        <div className={`w-1.5 h-1.5 rounded-full ${isSuccess ? 'bg-emerald-400' : 'bg-blue-400'}`}></div>
+                        <p className="text-sm text-slate-600">
+                          {isManual ? 'Création manuelle' : 'Upload PDF'}
+                        </p>
+                      </div>
+                    </div>
+                    <div className={`px-3 py-1 rounded-full ${
+                      isSuccess ? 'bg-emerald-100' : 'bg-blue-100'
+                    }`}>
+                      <span className={`text-xs font-semibold ${
+                        isSuccess ? 'text-emerald-700' : 'text-blue-700'
+                      }`}>
+                        {isSuccess ? 'PRÊT' : 'EN COURS'}
+                      </span>
+                    </div>
+                  </div>
                 </div>
-              </div>
-              <div className="px-3 py-1 bg-blue-100 rounded-full">
-                <span className="text-xs font-semibold text-blue-700">ENVOYÉ</span>
-              </div>
+              )
+            })
+          ) : (
+            <div className="text-center py-8 text-slate-500">
+              <FileOutput className="h-12 w-12 mx-auto mb-4 text-slate-300" />
+              <p className="text-lg font-medium">Aucune activité récente</p>
+              <p className="text-sm">Vos dernières actions apparaîtront ici</p>
             </div>
-          </div>
-          
-          <div className="group relative rounded-2xl bg-purple-50/80 border border-purple-200/50 p-5 hover:bg-purple-50 transition-all duration-300">
-            <div className="flex items-center space-x-4">
-              <div className="p-2.5 bg-purple-100 rounded-xl">
-                <Package className="h-5 w-5 text-purple-600" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-medium text-slate-900">Traitement en lot terminé (45 factures)</p>
-                <div className="flex items-center space-x-2 mt-1">
-                  <p className="text-sm text-purple-700">Il y a 1 heure</p>
-                  <div className="w-1.5 h-1.5 bg-purple-400 rounded-full"></div>
-                  <p className="text-sm text-slate-600">Import CSV</p>
-                </div>
-              </div>
-              <div className="px-3 py-1 bg-purple-100 rounded-full">
-                <span className="text-xs font-semibold text-purple-700">TERMINÉ</span>
-              </div>
-            </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

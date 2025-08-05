@@ -316,7 +316,6 @@ function getActionLabel(action: string): string {
     'facturx_generated': 'Factur-X généré',
     'transmission_sent': 'Transmission envoyée',
     'compliance_check': 'Vérification conformité',
-    'bulk_processing_completed': 'Traitement en lot terminé',
     'company_settings_updated': 'Paramètres entreprise mis à jour',
     'user_login': 'Connexion utilisateur',
     'user_logout': 'Déconnexion utilisateur',

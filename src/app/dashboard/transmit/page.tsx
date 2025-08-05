@@ -17,7 +17,7 @@ import {
   AlertTriangle
 } from 'lucide-react'
 import { transmissionApi, invoiceApi, handleApiError } from '@/lib/api/client'
-import { usePolling } from '@/hooks/usePolling'
+import { usePolling } from '@/lib/hooks/realtime'
 import { useToast } from '@/components/ui/toast'
 
 interface Transmission {
@@ -35,7 +35,7 @@ interface Transmission {
   invoices?: {
     invoice_number: string
     supplier_name: string
-    total_amount: number
+    total_amount_including_vat: number
     buyer_name?: string
     buyer_siret?: string
   }
@@ -54,6 +54,8 @@ export default function TransmitPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [isTransmitting, setIsTransmitting] = useState(false)
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [isRetrying, setIsRetrying] = useState(false)
   const [transmissionStats, setTransmissionStats] = useState<TransmissionStats>({
     total: 0,
     pending: 0,
@@ -61,12 +63,20 @@ export default function TransmitPage() {
     errors: 0
   })
   
+  // Error states
+  const [transmissionsError, setTransmissionsError] = useState<string | null>(null)
+  const [refreshError, setRefreshError] = useState<string | null>(null)
+  const [transmitError, setTransmitError] = useState<string | null>(null)
+  const [retryError, setRetryError] = useState<string | null>(null)
+  
   const toast = useToast()
 
   // Load transmissions data
   const loadTransmissions = async () => {
     try {
-      setError(null)
+      setTransmissionsError(null)
+      setIsLoading(true)
+      // Get all transmissions for the user
       const response = await transmissionApi.getStatus()
       if (response.success && response.transmissions) {
         setTransmissions(response.transmissions)
@@ -77,7 +87,8 @@ export default function TransmitPage() {
         }
       }
     } catch (error) {
-      setError(handleApiError(error))
+      const errorMessage = handleApiError(error)
+      setTransmissionsError(errorMessage)
       toast.error('Erreur de chargement', 'Impossible de charger les transmissions')
     } finally {
       setIsLoading(false)
@@ -179,14 +190,30 @@ export default function TransmitPage() {
   }, [transmissions])
 
   const handleRefreshTransmissions = async () => {
-    await refreshTransmissions(async () => {
+    try {
+      setIsRefreshing(true)
+      setRefreshError(null)
       const result = await transmissionApi.getStatus()
-      return result
-    })
+      if (result.success && result.transmissions) {
+        setTransmissions(result.transmissions)
+        toast.success('Transmissions actualisées')
+      } else {
+        throw new Error(result.error || 'Erreur lors de l\'actualisation')
+      }
+    } catch (error) {
+      const errorMessage = handleApiError(error)
+      setRefreshError(errorMessage)
+      toast.error('Erreur d\'actualisation', errorMessage)
+    } finally {
+      setIsRefreshing(false)
+    }
   }
 
   const handleRetryTransmission = async (transmissionId: string) => {
-    await retryTransmission(async () => {
+    try {
+      setIsRetrying(true)
+      setRetryError(null)
+      
       // Find the transmission to get the invoice ID
       const transmission = transmissions?.find(t => t.id === transmissionId)
       if (!transmission?.invoice_id) {
@@ -208,12 +235,27 @@ export default function TransmitPage() {
           retry: true
         }
       )
-      return result
-    })
+      
+      if (result.success) {
+        toast.success('Transmission relancée')
+        await loadTransmissions() // Refresh data
+      } else {
+        throw new Error(result.error || 'Erreur lors de la relance')
+      }
+    } catch (error) {
+      const errorMessage = handleApiError(error)
+      setRetryError(errorMessage)
+      toast.error('Erreur de relance', errorMessage)
+    } finally {
+      setIsRetrying(false)
+    }
   }
 
   const handleTransmitPending = async () => {
-    await transmitPending(async () => {
+    try {
+      setIsTransmitting(true)
+      setTransmitError(null)
+      
       const pendingTransmissions = transmissions?.filter(t => t.status === 'pending') || []
       
       if (pendingTransmissions.length === 0) {
@@ -240,8 +282,15 @@ export default function TransmitPage() {
         }
       }
       
-      return results
-    })
+      toast.success(`${results.length} transmission(s) lancée(s)`)
+      await loadTransmissions() // Refresh data
+    } catch (error) {
+      const errorMessage = handleApiError(error)
+      setTransmitError(errorMessage)
+      toast.error('Erreur de transmission', errorMessage)
+    } finally {
+      setIsTransmitting(false)
+    }
   }
 
   const filteredTransmissions = selectedStatus === 'all' 
@@ -279,9 +328,9 @@ export default function TransmitPage() {
           <Button 
             onClick={handleRefreshTransmissions}
             variant="outline"
-            disabled={isRefreshing || transmissionsLoading}
+            disabled={isRefreshing || isLoading}
           >
-            <RefreshCw className={`h-4 w-4 mr-2 ${(isRefreshing || transmissionsLoading) ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`h-4 w-4 mr-2 ${(isRefreshing || isLoading) ? 'animate-spin' : ''}`} />
             Actualiser
           </Button>
           
@@ -406,7 +455,7 @@ export default function TransmitPage() {
           </div>
 
           <div className="space-y-4">
-            {transmissionsLoading ? (
+            {isLoading ? (
               // Loading state
               <div className="space-y-4">
                 {[...Array(3)].map((_, i) => (
@@ -452,8 +501,8 @@ export default function TransmitPage() {
                     <div className="flex items-center space-x-6">
                       <div className="text-right">
                         <div className="font-semibold text-slate-900">
-                          {transmission.invoices?.total_amount 
-                            ? formatAmount(transmission.invoices.total_amount)
+                          {transmission.invoices?.total_amount_including_vat 
+                            ? formatAmount(transmission.invoices.total_amount_including_vat)
                             : 'Montant inconnu'
                           }
                         </div>

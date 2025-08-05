@@ -8,18 +8,25 @@ import {
   FileOutput,
   Send,
   Search,
-  Package,
-  Receipt
+  Receipt,
+  Plus
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 
-// Core MVP Features Only (as per CLAUDE.md)
+// Core MVP Features + Manual Invoice Builder
 const navigation = [
   {
     name: 'Tableau de bord',
     href: '/dashboard',
     icon: Home,
     description: 'Vue d\'ensemble'
+  },
+  {
+    name: 'Créer Facture',
+    href: '/dashboard/create',
+    icon: Plus,
+    description: 'Éditeur manuel',
+    featured: true
   },
   {
     name: 'Convertir PDF',
@@ -40,12 +47,6 @@ const navigation = [
     href: '/dashboard/compliance',
     icon: Search,
     description: 'Conformité'
-  },
-  {
-    name: 'Traitement en lot',
-    href: '/dashboard/bulk',
-    icon: Package,
-    description: 'Import CSV'
   }
 ]
 
@@ -115,18 +116,23 @@ export function DashboardSidebar() {
                   'group relative flex items-center px-4 py-3 text-sm font-medium rounded-xl transition-all duration-300 overflow-hidden',
                   item.primary 
                     ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg hover:shadow-xl hover:scale-[1.02] transform'
+                    : item.featured
+                    ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-lg hover:shadow-xl hover:scale-[1.02] transform'
                     : isActive
                     ? 'bg-blue-50/80 text-blue-700 border border-blue-200/50 shadow-sm backdrop-blur-sm'
                     : 'text-slate-700 hover:bg-slate-50/80 hover:text-slate-900 hover:shadow-sm backdrop-blur-sm'
                 )}
               >
-                {/* Background effect for primary button */}
+                {/* Background effect for primary and featured buttons */}
                 {item.primary && (
                   <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                 )}
+                {item.featured && (
+                  <div className="absolute inset-0 bg-gradient-to-r from-green-500 to-emerald-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                )}
                 
                 {/* Active indicator */}
-                {isActive && !item.primary && (
+                {isActive && !item.primary && !item.featured && (
                   <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-blue-500 to-purple-500 rounded-r-full"></div>
                 )}
                 
@@ -135,6 +141,8 @@ export function DashboardSidebar() {
                     'mr-3 p-1.5 rounded-lg transition-colors duration-200',
                     item.primary 
                       ? 'bg-white/20' 
+                      : item.featured
+                      ? 'bg-white/20'
                       : isActive 
                       ? 'bg-blue-100' 
                       : 'bg-slate-100 group-hover:bg-slate-200'
@@ -144,6 +152,8 @@ export function DashboardSidebar() {
                         'h-4 w-4 flex-shrink-0 transition-colors duration-200',
                         item.primary 
                           ? 'text-white' 
+                          : item.featured
+                          ? 'text-white'
                           : isActive 
                           ? 'text-blue-600' 
                           : 'text-slate-500 group-hover:text-slate-600'
@@ -154,7 +164,7 @@ export function DashboardSidebar() {
                   <div className="flex-1 min-w-0">
                     <div className={cn(
                       'font-semibold truncate',
-                      item.primary ? 'text-white' : isActive ? 'text-blue-700' : 'text-slate-700'
+                      item.primary ? 'text-white' : item.featured ? 'text-white' : isActive ? 'text-blue-700' : 'text-slate-700'
                     )}>
                       {item.name}
                     </div>
@@ -162,6 +172,8 @@ export function DashboardSidebar() {
                       'text-xs truncate mt-0.5',
                       item.primary 
                         ? 'text-blue-100' 
+                        : item.featured
+                        ? 'text-green-100'
                         : isActive 
                         ? 'text-blue-600/70' 
                         : 'text-slate-500'
@@ -176,6 +188,8 @@ export function DashboardSidebar() {
                         'ml-2 transition-all duration-200',
                         item.primary 
                           ? 'bg-white/20 text-white border-white/30 hover:bg-white/30' 
+                          : item.featured
+                          ? 'bg-white/20 text-white border-white/30 hover:bg-white/30'
                           : isActive 
                           ? 'bg-blue-100 text-blue-700 border-blue-200' 
                           : 'bg-slate-100 text-slate-600 border-slate-200'
